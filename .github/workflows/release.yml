@@ -1,0 +1,39 @@
+name: Test and release Playground
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: playground-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 xvfb dbus-x11
+      - name: Test Python and renderer
+        working-directory: playground
+        run: |
+          /usr/bin/python3 -m unittest discover -s tests -v
+          /usr/bin/python3 -m compileall -q .
+          bash -n install.sh
+      - name: Smoke test GTK settings
+        run: dbus-run-session -- xvfb-run -a /usr/bin/python3 playground/tests/smoke_ui.py
+      - name: Package release
+        run: /usr/bin/python3 scripts/package.py
+      - name: Publish version if new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(/usr/bin/python3 -c "import sys; sys.path.insert(0, 'playground'); from version import VERSION; print(VERSION)")
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Version v$VERSION is already released. Bump playground/version.py for a new release."
+          else
+            gh release create "v$VERSION" dist/playground.tar.gz dist/playground.tar.gz.sha256 --target "$GITHUB_SHA" --title "Playground $VERSION" --notes-file RELEASE_NOTES.md --latest
+          fi
