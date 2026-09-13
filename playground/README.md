@@ -174,3 +174,30 @@ can register its own enable/disable callback without stopping other modules. Add
 settings page and implement its runtime before marking its catalog entry available.
 The current overlay and notification backend remain in `edgeglow.py`; the module
 browser and card illustrations are in `playground_ui.py`.
+
+## Mouse Magic
+
+Open Mouse Magic from the module browser. Mix the ribbon, fairy dust, click ripples,
+scattered particles, and idle cursor cloud using separate toggles, or start with
+Fairy garden, Comet, Quiet orbit, or Everything. Motion, density, and brightness
+change live. Particles can swirl, scatter, or attract. Colors always follow the
+Edgeglow palette, even when Edgeglow itself is switched off.
+
+The module is initially off. Enabling it starts a read-only, per-user KWin script
+for global cursor position. Normal applications receive mouse input as usual.
+The fullscreen switch hides Mouse Magic on the active fullscreen window's monitor.
+Locking the session hides the effects. Disabling the module stops the bridge.
+
+Global click ripples need the native KWin helper. **Set up click helper…** opens
+Konsole, installs build dependencies with your confirmation, compiles against your
+installed KWin headers, and asks for administrator authentication to install the
+small plugin. This setup currently targets CachyOS/Arch. Then press **Reconnect**.
+Trails and particles work without the helper, and the local preview always supports
+clicks. No input device permissions, input grabs, or root background process are used.
+
+After a KDE upgrade, re-run helper setup if the module falls back to cursor-only
+mode. The helper is deliberately built on your machine because KWin's native plugin
+ABI changes. The app updater preserves Mouse Magic settings, but does not install
+system packages or rebuild the helper automatically. To remove the optional helper,
+first disable Mouse Magic, then remove
+`/usr/lib/qt6/plugins/kwin/effects/plugins/playground_mouse.so` as administrator.

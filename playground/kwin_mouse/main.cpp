@@ -4,6 +4,7 @@
 #include <effect/effectwindow.h>
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QDBusServiceWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -13,8 +14,13 @@ namespace KWin {
 class PlaygroundMouse : public Effect {
     Q_OBJECT
     QTimer timer;
+    QDBusServiceWatcher watcher;
 public:
     PlaygroundMouse() {
+        watcher.setConnection(QDBusConnection::sessionBus());
+        watcher.setWatchMode(QDBusServiceWatcher::WatchForUnregistration);
+        watcher.addWatchedService(QStringLiteral("io.github.edgeglow"));
+        connect(&watcher, &QDBusServiceWatcher::serviceUnregistered, &timer, &QTimer::stop);
         connect(effects, &EffectsHandler::mouseChanged, this,
             [this](const auto &, const auto &, Qt::MouseButtons buttons,
                    Qt::MouseButtons oldButtons, auto, auto) {
@@ -27,6 +33,7 @@ public:
     // This bridge has no painting work and never occupies the effect chain.
     bool isActive() const override { return false; }
     void frame(int pressed) {
+        if (!timer.isActive()) return;
         const bool locked = effects->isScreenLocked();
         const auto pos = effects->cursorPos();
         QJsonObject data{{"x", locked ? 0. : pos.x()}, {"y", locked ? 0. : pos.y()},
