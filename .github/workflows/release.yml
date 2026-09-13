@@ -24,6 +24,7 @@ jobs:
           /usr/bin/python3 -m compileall -q .
           bash -n install.sh
       - name: Smoke test GTK settings
+        timeout-minutes: 2
         run: dbus-run-session -- xvfb-run -a /usr/bin/python3 playground/tests/smoke_ui.py
       - name: Package release
         run: /usr/bin/python3 scripts/package.py

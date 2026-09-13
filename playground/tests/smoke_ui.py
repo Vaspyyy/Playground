@@ -6,9 +6,12 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 with tempfile.TemporaryDirectory() as directory:
     os.environ['XDG_CONFIG_HOME'] = directory
-    import edgeglow
     os.environ['GDK_BACKEND'] = 'x11'
+    import gi
+    gi.require_version('Gtk', '3.0')
     from gi.repository import Gtk, GLib
+    Gtk.init([])
+    import edgeglow
     app = edgeglow.Edgeglow()
     app.register(None)
     app.activate()
