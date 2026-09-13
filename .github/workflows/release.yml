@@ -31,6 +31,7 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           PLAYGROUND_TEST_INPUT: /tmp/playground-mouse/send-test-click
         run: |
+          setcap -r /usr/bin/kwin_wayland
           export XDG_RUNTIME_DIR=$(mktemp -d)
           dbus-run-session -- kwin_wayland --virtual --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"
   release:

@@ -27,6 +27,7 @@ class MouseMagic:
         self.script = False
         self.owner = None
         self.status = 'Off. Enable Mouse Magic to start.'
+        self.stale_reported = False
         self.bus = app.get_dbus_connection()
         info = Gio.DBusNodeInfo.new_for_xml('<node><interface name="'+IFACE+'"><method name="Frame"><arg type="s" direction="in"/></method></interface></node>')
         self.registration = self.bus.register_object(PATH, info.interfaces[0], self.receive, None, None)
@@ -95,6 +96,8 @@ class MouseMagic:
                 self.call('/Scripting/Script'+str(script_id),'org.kde.kwin.Script','run')
                 self.set_status('Cursor effects ready. Click ripples need the KDE click helper below.')
             self.previous = time.monotonic()
+            self.last_frame = self.previous
+            self.stale_reported = False
             self.timer = GLib.timeout_add(16,self.tick)
         except (GLib.Error, RuntimeError) as error:
             self.stop()
@@ -148,7 +151,15 @@ class MouseMagic:
     def tick(self):
         now = time.monotonic()
         settings = self.app.settings['mouse']
-        visible = not self.locked and now-self.last_frame < 2
+        fresh = now-self.last_frame < 2
+        if not fresh and not self.stale_reported:
+            self.stale_reported = True
+            self.set_status('Cursor connection stopped. Press Reconnect to try again.')
+        elif fresh and self.stale_reported:
+            self.stale_reported = False
+            self.set_status('Connected to KDE · all effects ready, including click ripples.' if self.native
+                            else 'Cursor effects ready. Click ripples need the KDE click helper below.')
+        visible = not self.locked and fresh
         self.world.step(now, now-self.previous, settings)
         self.previous = now
         for overlay in self.overlays:
