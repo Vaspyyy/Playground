@@ -1,24 +1,24 @@
-# Playground 0.3.0
+# Playground 0.5.0
 
-A cozy desktop effects playground for CachyOS / KDE Plasma Wayland. Edgeglow is its first working module.
+A cozy desktop effects playground for CachyOS / KDE Plasma Wayland.
+Edgeglow and Mouse Magic can run together, with separate settings and enable switches.
+Atmosphere, Little toys, Sound & color, and interactive play mode remain planned.
 
-## New in Playground 0.3.0
+## Install and update
 
-- A soft pastel module browser with rounded cards and springy illustrated hover animations.
-- Edgeglow has its own control page and synchronized enable switches on its card and controls.
-- An independent module lifecycle controller, ready for simultaneous modules without exclusive selection.
-- Mouse magic, Atmosphere, Little toys, and Sound & color are clearly marked Planned.
-  They have no working effects or toggles in this release. Interactive play mode is also future work.
-- Start-at-login control and Quit Playground are available in the global footer.
-- Returning to the module browser stops continuous preview; notification effects keep working.
+Existing users: **Check for updates → Update & restart**. Your settings are preserved.
+For a new installation, run as your normal desktop user:
 
-### Upgrade from Edgeglow
+```sh
+curl -fsSL https://raw.githubusercontent.com/Vaspyyy/Playground/main/install-online.py -o /tmp/playground-install.py && python3 /tmp/playground-install.py
+```
 
-Extract this release into a fresh folder, then run `./install.sh`. Your dependencies,
-settings, favorites, palettes, and startup integration are reused. The application
-launcher now says **Playground**. The internal application ID and installed directory
-remain `edgeglow` to prevent duplicate startup entries and preserve existing settings.
-No extra packages are required.
+For manual source installation, run `./install.sh` from this folder. It lists any
+missing desktop dependencies. The base app installs per user without compilation.
+The optional Mouse Magic click helper has a separate setup action described below.
+
+The internal app ID and installed directory remain `edgeglow` to preserve settings
+and avoid duplicate startup entries. Login startup is controlled in the global footer.
 
 ## Included Edgeglow effects
 
@@ -34,34 +34,12 @@ No extra packages are required.
 - Every monitor shares the effect, seed, clock, and palette. New effect corner crossings
   use normalized screen positions, so differently shaped displays stay synchronized.
 
-### Upgrade from 0.1.0
-
-Extract this release into a new folder and run `./install.sh` there. No new packages
-are required if the previous version works. The installer stops the previous instance,
-updates the installed files, and opens settings. Existing appearance values are preserved.
-New defaults select Sparks, Comets, and Waves, Rainbow palette, and 45% chaos.
-Continuous preview is never saved or enabled automatically on startup.
-
-## Install
-
-Extract `playground-0.3.0.tar.gz`, open a terminal in the extracted `edgeglow` folder, and run:
-
-```sh
-sudo pacman -S --needed python python-gobject python-cairo gtk3 gtk-layer-shell
-./install.sh
-```
-
-Run the installer as your normal desktop user. Only the package installation uses sudo.
-The installer copies the app into your user application directory, adds its icon and
-application launcher entry, enables login startup, and opens settings when run from
-a Wayland session. No compilation, pip, AUR helper, or KDE restart is needed.
-
 Open **Playground** in KDE's application launcher whenever you want to change settings.
 Closing the settings window leaves the listener running. The **Quit** button stops
 it until the next launch or login. Disable login startup in settings if desired.
 Reinstalling enables login startup again; your appearance settings are preserved.
 
-## Your defaults
+## Edgeglow defaults
 
 | Option | Behavior |
 | --- | --- |
@@ -97,7 +75,8 @@ There is no tray icon; reopen settings through the application launcher.
 
 The app listens for standard `org.freedesktop.Notifications.Notify` calls using a
 separate D-Bus monitoring connection. It never owns or replaces KDE's notification
-service. Notification text is neither parsed nor saved. It has no network code.
+service. Notification text is neither parsed nor saved. Network access is used only when
+you check for or download an app update.
 
 Notifications an application never submits, such as a disabled in-app notification,
 cannot trigger the glow. Custom in-app banners that bypass the desktop notification
@@ -113,10 +92,10 @@ counts as an arrival. No attempt is made to display over the secure lock screen.
   Monitoring may be restricted by session policy. The app retries periodically and
   does not alter bus policies. Preview remains available.
 - **No glow for one app:** check that it actually sends desktop notifications.
-- **Settings hidden:** open Edgeglow again from the launcher. Only one app instance
+- **Settings hidden:** open Playground again from the launcher. Only one app instance
   owns the listener, including when login startup has already launched it.
 
-To see diagnostic output, quit Edgeglow, then run:
+To see diagnostic output, quit Playground, then run:
 
 ```sh
 /usr/bin/python3 "${XDG_DATA_HOME:-$HOME/.local/share}/edgeglow/edgeglow.py"
@@ -140,19 +119,17 @@ Saved appearance settings are retained under `${XDG_CONFIG_HOME:-$HOME/.config}/
 
 ## Verification and limitations
 
-Eighteen automated tests pass, covering the original timing and settings checks,
-all effect/palette combinations at both chaos extremes, deterministic particles,
-synchronized corner positions, palette continuity, migration from old settings, and independent module lifecycle behavior. Python syntax and the installer shell syntax were checked.
-`preview.png` is rendered with the app's actual Cairo drawing function over a demo
-background. It is not a screenshot of a live desktop or settings window.
+Thirty unit tests cover timing, settings migration, bounded particle simulation,
+rendering, module independence, and update verification. GTK smoke tests check both
+settings pages and their controls. A disposable KDE Wayland session tests native
+and script cursor tracking, click ripples, actual input passing to the underlying
+window, fullscreen suppression, and module shutdown. The native helper is compiled
+against current Arch KWin as a release gate.
 
-You reported the original 0.1.0 worked in your desktop tests. This update preserves
-that notification and Wayland integration. The Playground module browser and its controls have not been run in a live KDE
-session here. The renderer and module lifecycle tests run independently of GTK;
-the new interface still needs verification on your desktop.
-Effects use a reusable lower-resolution intermediate for soft light to limit raster
-work on large screens. Continuous preview consumes CPU while running; it stops
-when you close settings. Notification bursts are ignored during continuous preview.
+These checks do not replace testing mixed monitor scaling, your GPU, and specific
+fullscreen games on your desktop. Mouse Magic and continuous Edgeglow preview use
+an animation timer while enabled. Closing settings stops the local preview;
+Mouse Magic keeps running until its module is disabled or Playground quits.
 
 For development, run `python3 -m unittest discover -s tests -v` from this folder.
 Tests can use Pycairo or cairocffi; the installed app uses Pycairo.

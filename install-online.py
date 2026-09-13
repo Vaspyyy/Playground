@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """GitHub release discovery and bounded, verified extraction. No GTK dependency."""
 import hashlib
 import io
@@ -14,6 +15,8 @@ API = f'https://api.github.com/repos/{REPOSITORY}/releases/latest'
 MAX_ARCHIVE = 16 * 1024 * 1024
 MAX_UNPACKED = 40 * 1024 * 1024
 REQUIRED = {'edgeglow.py', 'core.py', 'render.py', 'modules.py', 'playground_ui.py',
+            'mouse_core.py', 'mouse_magic.py', 'mouse_ui.py', 'pointer.js', 'setup-mouse.sh',
+            'kwin_mouse/CMakeLists.txt', 'kwin_mouse/main.cpp', 'kwin_mouse/metadata.json',
             'updater.py', 'update_ui.py', 'update_helper.py', 'version.py', 'install.py', 'install.sh', 'edgeglow.svg', 'LICENSE'}
 
 
