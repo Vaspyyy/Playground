@@ -132,7 +132,13 @@ class World:
                     cr.set_source_rgba(*rgb,alpha*fade*opacity)
                     cr.set_line_width((2+motion*9)*fade*spread)
                     cr.set_line_cap(1)
-                    cr.move_to(*points[i-1][:2]);cr.line_to(x,y);cr.stroke()
+                    a = points[max(0,i-2)]
+                    b = points[i-1]
+                    d = points[min(len(points)-1,i+1)]
+                    cr.move_to(*b[:2])
+                    cr.curve_to(b[0]+(x-a[0])/6,b[1]+(y-a[1])/6,
+                                x-(d[0]-b[0])/6,y-(d[1]-b[1])/6,x,y)
+                    cr.stroke()
         if settings['dust']:
             for x,y,vx,vy,born,hue in self.dust:
                 fade = max(0,1-(now-born)/1.2)

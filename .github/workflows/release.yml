@@ -14,26 +14,22 @@ jobs:
     container: archlinux:base-devel
     steps:
       - name: Install KDE build dependencies
-        run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules vulkan-headers plasma-wayland-protocols kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
+        run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules vulkan-headers xorg-server-xvfb xdotool kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
       - uses: actions/checkout@v4
       - name: Compile the native click bridge against current KDE
         run: |
           cmake -S playground/kwin_mouse -B /tmp/playground-mouse -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
           cmake --build /tmp/playground-mouse --parallel 2
           cmake --install /tmp/playground-mouse
-          wayland-scanner client-header /usr/share/plasma-wayland-protocols/fake-input.xml /tmp/playground-mouse/fake-input-client.h
-          wayland-scanner private-code /usr/share/plasma-wayland-protocols/fake-input.xml /tmp/playground-mouse/fake-input.c
-          cc playground/tests/send_test_click.c /tmp/playground-mouse/fake-input.c -I/tmp/playground-mouse -lwayland-client -o /tmp/playground-mouse/send-test-click
       - name: Test in virtual KDE Wayland
         timeout-minutes: 3
         env:
           QT_QPA_PLATFORM: offscreen
           LIBGL_ALWAYS_SOFTWARE: "1"
-          PLAYGROUND_TEST_INPUT: /tmp/playground-mouse/send-test-click
         run: |
           setcap -r /usr/bin/kwin_wayland
           export XDG_RUNTIME_DIR=$(mktemp -d)
-          dbus-run-session -- kwin_wayland --virtual --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"
+          xvfb-run -a -s "-screen 0 1280x1024x24" sh -c 'dbus-run-session -- kwin_wayland --x11-display "$DISPLAY" --width 1280 --height 1024 --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"' 
   release:
     needs: mouse-helper
     runs-on: ubuntu-24.04

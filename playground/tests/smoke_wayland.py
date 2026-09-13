@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory() as directory:
     target.present()
     settle()
     mouse.world.ripples.clear()
-    subprocess.run([os.environ['PLAYGROUND_TEST_INPUT'],'400','300'],check=True)
+    subprocess.run(['xdotool','mousemove','--sync','400','300','click','1'],check=True)
     settle(180)
     assert clicks, 'Click did not reach the application under the overlay'
     assert len(mouse.world.ripples)==1, 'Native click did not produce exactly one ripple'
