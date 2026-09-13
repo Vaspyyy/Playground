@@ -9,11 +9,19 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 with tempfile.TemporaryDirectory() as directory:
     os.environ['XDG_CONFIG_HOME'] = directory
     import edgeglow
-    from gi.repository import GLib, Gtk
+    import install
+    install.refresh_desktop_integration()
+    from gi.repository import GLib, Gtk, Gio
     app = edgeglow.Edgeglow()
     app.register(None)
     app.activate()
     assert app.supported, 'Layer shell unavailable in virtual KWin'
+    assert app.window.get_icon_name() == app.get_application_id() == 'io.github.edgeglow'
+    entry = Gio.DesktopAppInfo.new('io.github.edgeglow.desktop')
+    assert entry is not None, 'Plasma desktop entry is missing'
+    assert entry.get_icon().get_file().get_path() == str(install.ICON), 'Launcher does not use bundled SVG'
+    assert Gtk.IconTheme.get_default().has_icon('io.github.edgeglow'), 'Installed SVG cannot be resolved'
+
     def settle(ms=600):
         loop = GLib.MainLoop()
         GLib.timeout_add(ms,lambda: loop.quit() or False)

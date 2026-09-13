@@ -115,6 +115,7 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
     def __init__(self, app, panel_class, autostart, desktop_entry):
         super().__init__(application=app, title='Playground')
         self.owner = app
+        self.set_icon_name(app.get_application_id())
         self.set_default_size(850, 820)
         self.set_size_request(660, 460)
         styled(self, 'playground')

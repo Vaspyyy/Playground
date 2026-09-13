@@ -17,6 +17,8 @@ with tempfile.TemporaryDirectory() as directory:
     app.activate()
     assert app.window is not None
     window = app.window
+    assert window.get_icon_name() == app.get_application_id() == 'io.github.edgeglow'
+    assert GLib.get_prgname() == 'io.github.edgeglow'
     for _ in range(30):
         while Gtk.events_pending():
             Gtk.main_iteration_do(False)

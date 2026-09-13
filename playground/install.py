@@ -21,9 +21,26 @@ def desktop(argument=''):
     path = str(TARGET / 'edgeglow.py')
     path = path.replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$').replace('%', '%%')
     return ('[Desktop Entry]\nType=Application\nName=Playground\n'
-            'Comment=A cozy desktop effects playground\nIcon=io.github.edgeglow\n'
+            f'Comment=A cozy desktop effects playground\nIcon={ICON}\nStartupWMClass=io.github.edgeglow\n'
             f'Exec=/usr/bin/python3 "{path}" {argument}\n'
             'Terminal=false\nCategories=Utility;\nStartupNotify=false\n')
+
+
+def refresh_desktop_integration():
+    """Repair launcher/icon metadata on upgrades without enabling login startup."""
+    entries = [(ENTRY, desktop()), (ICON, (SOURCE / 'edgeglow.svg').read_text())]
+    if STARTUP.exists():
+        entries.append((STARTUP, desktop('--background')))
+    changed = False
+    for path, content in entries:
+        if not path.exists() or path.read_text() != content:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+            changed = True
+    if changed:
+        for command in (['update-desktop-database', str(ENTRY.parent)], ['kbuildsycoca6', '--noincremental']):
+            if shutil.which(command[0]):
+                subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def stop_existing():
@@ -49,12 +66,9 @@ def main():
         if (SOURCE / name).resolve() != (TARGET / name).resolve():
             (TARGET / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(SOURCE / name, TARGET / name)
-    for path, content in [(ENTRY, desktop()), (STARTUP, desktop('--background')),
-                          (ICON, (SOURCE / 'edgeglow.svg').read_text())]:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
-    if shutil.which('update-desktop-database'):
-        subprocess.run(['update-desktop-database', str(ENTRY.parent)], check=False)
+    STARTUP.parent.mkdir(parents=True, exist_ok=True)
+    STARTUP.write_text(desktop('--background'))
+    refresh_desktop_integration()
     print('Installed. Open Playground from your application launcher. Login startup is enabled.')
     if os.environ.get('WAYLAND_DISPLAY'):
         subprocess.Popen(['/usr/bin/python3', str(TARGET / 'edgeglow.py')],

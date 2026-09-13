@@ -27,6 +27,10 @@ CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
 SETTINGS = CONFIG / 'edgeglow' / 'settings.json'
 AUTOSTART = CONFIG / 'autostart' / 'io.github.edgeglow.desktop'
 APP_ID = 'io.github.edgeglow'
+# Plasma matches native Wayland windows to their desktop-file identity.
+GLib.set_prgname(APP_ID)
+GLib.set_application_name('Playground')
+Gdk.set_program_class(APP_ID)
 
 
 class NotificationMonitor:
@@ -291,13 +295,9 @@ class EdgeglowPanel(Gtk.Box):
 
 
 def desktop_entry(argument=''):
-    executable = str(Path(__file__).resolve())
-    # Desktop Entry Exec quoting is separate from shell quoting.
-    executable = executable.replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$').replace('%', '%%')
-    return ('[Desktop Entry]\nType=Application\nName=Playground\n'
-            'Comment=A cozy desktop effects playground\nIcon=io.github.edgeglow\n'
-            f'Exec=/usr/bin/python3 "{executable}" {argument}\n'
-            'Terminal=false\nCategories=Utility;\nStartupNotify=false\n')
+    from install import desktop
+    return desktop(argument)
+
 
 
 class Edgeglow(Gtk.Application):
@@ -323,6 +323,13 @@ class Edgeglow(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
+        Gtk.Window.set_default_icon_name(APP_ID)
+        from install import TARGET, refresh_desktop_integration
+        if Path(__file__).resolve().parent == TARGET.resolve():
+            try:
+                refresh_desktop_integration()
+            except OSError as error:
+                print('Could not refresh Playground launcher/icon: '+str(error), flush=True)
         self.hold()
         Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
         self.supported = GtkLayerShell.is_supported()
