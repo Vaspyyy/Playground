@@ -8,7 +8,7 @@ if ! command -v pacman >/dev/null; then
     echo 'Automatic dependency setup currently supports CachyOS and Arch only.'
     exit 1
 fi
-sudo pacman -S --needed base-devel cmake extra-cmake-modules
+sudo pacman -S --needed base-devel cmake extra-cmake-modules vulkan-headers
 build_dir=$(mktemp -d -t playground-mouse-build.XXXXXX)
 cmake -S kwin_mouse -B "$build_dir" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build "$build_dir" --parallel 2

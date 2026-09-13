@@ -4,11 +4,12 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import subprocess
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 with tempfile.TemporaryDirectory() as directory:
     os.environ['XDG_CONFIG_HOME'] = directory
     import edgeglow
-    from gi.repository import GLib
+    from gi.repository import GLib, Gtk
     app = edgeglow.Edgeglow()
     app.register(None)
     app.activate()
@@ -26,6 +27,27 @@ with tempfile.TemporaryDirectory() as directory:
     assert any(w.get_visible() for w in mouse.overlays), 'Mouse overlays not mapped'
     for overlay in mouse.overlays:
         assert overlay.get_window().get_pass_through(), 'Overlay intercepts mouse input'
+    # A real Wayland click must reach the underlying app and create exactly one ripple.
+    target = Gtk.Window()
+    button = Gtk.Button(label='Click-through target')
+    clicks = []
+    button.connect('clicked',lambda *_: clicks.append(True))
+    target.add(button)
+    target.fullscreen()
+    target.show_all()
+    target.present()
+    settle()
+    mouse.world.ripples.clear()
+    subprocess.run([os.environ['PLAYGROUND_TEST_INPUT'],'400','300'],check=True)
+    settle(180)
+    assert clicks, 'Click did not reach the application under the overlay'
+    assert len(mouse.world.ripples)==1, 'Native click did not produce exactly one ripple'
+    app.settings['mouse']['fullscreen'] = False
+    settle(180)
+    assert all(not w.get_visible() for w in mouse.overlays), 'Fullscreen suppression failed'
+    target.destroy()
+    app.settings['mouse']['fullscreen'] = True
+    settle()
     # Exercise the fallback script in the same real compositor.
     original_call = mouse.call
     def without_native(path,interface,method,*args,**kwargs):
