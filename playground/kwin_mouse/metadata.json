@@ -1,0 +1,10 @@
+{
+  "KPlugin": {
+    "Id": "playground_mouse",
+    "Name": "Playground mouse input",
+    "Description": "Read-only cursor and click bridge for Playground",
+    "Version": "1.0",
+    "License": "MIT",
+    "EnabledByDefault": false
+  }
+}

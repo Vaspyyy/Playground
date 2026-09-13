@@ -12,7 +12,7 @@ class ModuleSpec:
 
 CATALOG = (
     ModuleSpec('edgeglow', 'Edgeglow', 'A little magic around the edges.\nWaves, sparks, comets & color.', '#a48bd4', True),
-    ModuleSpec('mouse', 'Mouse magic', 'Trails, click ripples and tiny sparks\nthat follow your curiosity.', '#d99580'),
+    ModuleSpec('mouse', 'Mouse magic', 'Trails, click ripples and tiny sparks\nthat follow your curiosity.', '#d99580', True),
     ModuleSpec('atmosphere', 'Atmosphere', 'Rainy afternoons, falling snow\nand a sky full of fireflies.', '#78a897'),
     ModuleSpec('toys', 'Little toys', 'Bouncy things, curious creatures\nand a little playful physics.', '#d1af65'),
     ModuleSpec('audio', 'Sound & color', 'Let your desktop dance\nto whatever is playing.', '#88a8cf'),

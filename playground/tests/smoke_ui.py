@@ -50,7 +50,29 @@ with tempfile.TemporaryDirectory() as directory:
     assert not window.panel.enabled_switch.get_active()
     window.panel.enabled_switch.set_active(True)
     assert window.module_switch.get_active()
+    window.stack.set_visible_child_name('mouse')
+    settle()
+    mouse = window.mouse_panel
+    assert mouse.scroller.get_allocated_height() > 180, 'Mouse settings viewport collapsed'
+    window.module_switches['mouse'].set_active(True)
+    assert app.modules.enabled('mouse') and app.modules.enabled('edgeglow')
+    assert mouse.enabled_switch.get_active()
+    mouse.presets.set_active_id('Comet')
+    assert not app.settings['mouse']['field']
+    assert mouse.controls['motion'].get_value() == 70
+    mouse.controls['motion'].set_value(22)
+    assert app.settings['mouse']['motion'] == 22
+    assert mouse.presets.get_active_id() == 'custom'
+    mouse.reaction.set_active_id('scatter')
+    assert app.settings['mouse']['reaction'] == 'scatter'
+    mouse.toggles['fullscreen'].set_active(False)
+    assert not app.settings['mouse']['fullscreen']
+    mouse.enabled_switch.set_active(False)
+    assert not window.module_switches['mouse'].get_active()
+    assert app.modules.enabled('edgeglow')
     window.go_home()
+    settle()
+    assert mouse.preview_timer == 0, 'Hidden preview is still running'
     assert window.stack.get_visible_child_name() == 'home'
     window.destroy()
     app.quit()

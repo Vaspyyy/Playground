@@ -21,6 +21,7 @@ from core import DEFAULTS, EFFECTS, PALETTES, Pulse, load, save
 from render import draw_effect
 from modules import ModuleController
 from playground_ui import PlaygroundWindow
+from mouse_magic import MouseMagic
 
 CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
 SETTINGS = CONFIG / 'edgeglow' / 'settings.json'
@@ -305,6 +306,8 @@ class Edgeglow(Gtk.Application):
         self.settings = load(SETTINGS)
         self.modules = ModuleController()
         self.modules.register('edgeglow', self.apply_edgeglow_enabled, self.settings['enabled'])
+        self.modules.register('mouse', self.apply_mouse_enabled, self.settings['mouse']['enabled'])
+        self.mouse = None
         self.pulse = Pulse()
         self.continuous = False
         self.preview_start = 0
@@ -329,6 +332,9 @@ class Edgeglow(Gtk.Application):
             display.connect('monitor-removed', self.rebuild)
             self.rebuild()
             self.monitor = NotificationMonitor(self.trigger, self.set_status)
+            self.mouse = MouseMagic(self, GlowWindow)
+            if self.settings['mouse']['enabled']:
+                self.mouse.reconnect()
         else:
             self.set_status('Wayland layer shell is unavailable. Run this in your KDE Plasma Wayland session.')
 
@@ -359,8 +365,17 @@ class Edgeglow(Gtk.Application):
                 self.window.continuous_switch.set_active(False)
         self.save_settings()
 
-    def set_module_enabled(self, enabled):
-        self.modules.set_enabled('edgeglow', enabled)
+    def apply_mouse_enabled(self, enabled):
+        self.settings['mouse']['enabled'] = enabled
+        self.save_settings()
+        if self.mouse:
+            if enabled:
+                self.mouse.reconnect()
+            else:
+                self.mouse.stop()
+
+    def set_module_enabled(self, enabled, key='edgeglow'):
+        self.modules.set_enabled(key, enabled)
         if self.window:
             self.window.sync_modules()
 
@@ -450,6 +465,8 @@ class Edgeglow(Gtk.Application):
         return True
 
     def do_shutdown(self):
+        if self.mouse:
+            self.mouse.close()
         if self.timer:
             GLib.source_remove(self.timer)
         if self.monitor:

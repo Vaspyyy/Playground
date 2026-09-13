@@ -9,7 +9,28 @@ concurrency:
   group: playground-release
   cancel-in-progress: false
 jobs:
+  mouse-helper:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Install KDE build dependencies
+        run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
+      - uses: actions/checkout@v4
+      - name: Compile the native click bridge against current KDE
+        run: |
+          cmake -S playground/kwin_mouse -B /tmp/playground-mouse -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/playground-mouse --parallel 2
+          cmake --install /tmp/playground-mouse
+      - name: Test in virtual KDE Wayland
+        timeout-minutes: 3
+        env:
+          QT_QPA_PLATFORM: offscreen
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          dbus-run-session -- kwin_wayland --virtual --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"
   release:
+    needs: mouse-helper
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

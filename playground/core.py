@@ -4,16 +4,17 @@ import math
 import os
 import tempfile
 from pathlib import Path
+from mouse_core import normalize as normalize_mouse
 
 EFFECTS = ('sparks', 'comets', 'waves', 'classic')
 PALETTES = ('rainbow', 'aurora', 'fire', 'ice', 'candy', 'sunset')
 DEFAULTS = dict(width=44, brightness=90, speed=0.22, duration=2.0, enabled=True,
-                chaos=45, palette='rainbow', favorites=['sparks', 'comets', 'waves'])
+                chaos=45, palette='rainbow', favorites=['sparks', 'comets', 'waves'], mouse=normalize_mouse(None))
 LIMITS = dict(width=(8, 120), brightness=(5, 100), speed=(0.02, 1.0), duration=(0.5, 10.0), chaos=(0, 100))
 
 
 def normalize(raw):
-    result = dict(DEFAULTS, favorites=list(DEFAULTS['favorites']))
+    result = dict(DEFAULTS, favorites=list(DEFAULTS['favorites']), mouse=normalize_mouse(raw.get('mouse') if isinstance(raw, dict) else None))
     if not isinstance(raw, dict):
         return result
     for key, (low, high) in LIMITS.items():

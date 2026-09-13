@@ -4,6 +4,7 @@ import time
 from gi.repository import Gtk, Gdk, GLib
 from modules import CATALOG
 from update_ui import UpdateControls
+from mouse_ui import MousePanel
 
 CSS = b'''
 .playground { background-color: #f5f1eb; color: #443b51; }
@@ -143,6 +144,7 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
         home.pack_start(intro, False, False, 0)
         grid = Gtk.Grid(column_spacing=14, row_spacing=14)
         grid.set_column_homogeneous(True)
+        self.module_switches = {}
         for i, spec in enumerate(CATALOG):
             card = styled(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10), 'card')
             art = ModuleArt(spec)
@@ -154,10 +156,11 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
             header = Gtk.Box(spacing=10)
             header.pack_start(label(spec.title, 'card-title'), True, True, 0)
             if spec.available:
-                self.module_switch = Gtk.Switch()
-                self.module_switch.set_active(app.modules.enabled(spec.key))
-                self.module_switch.connect('notify::active', lambda switch, *_: app.set_module_enabled(switch.get_active()))
-                header.pack_end(self.module_switch, False, False, 0)
+                switch = Gtk.Switch()
+                switch.set_active(app.modules.enabled(spec.key))
+                switch.connect('notify::active', lambda switch, param, key=spec.key: app.set_module_enabled(switch.get_active(), key))
+                self.module_switches[spec.key] = switch
+                header.pack_end(switch, False, False, 0)
             else:
                 header.pack_end(label('Planned', 'pill'), False, False, 0)
             card.pack_start(header, False, False, 0)
@@ -166,7 +169,7 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
             card.pack_start(summary, False, False, 0)
             if spec.available:
                 button = Gtk.Button(label='Open & play')
-                button.connect('clicked', lambda *_: self.stack.set_visible_child_name('edgeglow'))
+                button.connect('clicked', lambda button, key=spec.key: self.stack.set_visible_child_name(key))
             else:
                 button = Gtk.Button(label='Not built yet')
                 button.set_sensitive(False)
@@ -185,6 +188,15 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
         self.panel = panel_class(app)
         module_page.pack_start(self.panel, True, True, 0)
         self.stack.add_named(module_page, 'edgeglow')
+        self.module_switch = self.module_switches['edgeglow']
+        mouse_page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        mouse_back = Gtk.Button(label='‹  All modules')
+        mouse_back.set_halign(Gtk.Align.START)
+        mouse_back.connect('clicked', lambda *_: self.go_home())
+        mouse_page.pack_start(mouse_back, False, False, 0)
+        self.mouse_panel = MousePanel(app)
+        mouse_page.pack_start(self.mouse_panel, True, True, 0)
+        self.stack.add_named(mouse_page, 'mouse')
         self.status = self.panel.status
         self.effect_label = self.panel.effect_label
         self.continuous_switch = self.panel.continuous_switch
@@ -211,11 +223,13 @@ class PlaygroundWindow(Gtk.ApplicationWindow):
         self.sync_modules()
 
     def sync_modules(self):
-        active = self.owner.modules.enabled('edgeglow')
-        for switch in (self.module_switch, self.panel.enabled_switch):
-            if switch.get_active() != active:
-                switch.set_active(active)
-        self.count.set_text(str(self.owner.modules.active_count())+' module on')
+        for key, panel in [('edgeglow', self.panel), ('mouse', self.mouse_panel)]:
+            active = self.owner.modules.enabled(key)
+            for switch in (self.module_switches[key], panel.enabled_switch):
+                if switch.get_active() != active:
+                    switch.set_active(active)
+        count = self.owner.modules.active_count()
+        self.count.set_text(str(count)+(' module on' if count == 1 else ' modules on'))
 
     def go_home(self):
         self.continuous_switch.set_active(False)
