@@ -161,7 +161,9 @@ class EdgeglowPanel(Gtk.Box):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         scroller = Gtk.ScrolledWindow()
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.add(scroller)
+        self.scroller = scroller
+        scroller.set_vexpand(True)
+        self.pack_start(scroller, True, True, 0)
         scroller.add(box)
         heading = Gtk.Label(xalign=0)
         heading.set_markup('<span size="26000" weight="bold">Edgeglow</span>')

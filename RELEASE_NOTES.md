@@ -1,8 +1,5 @@
-Playground now updates directly from GitHub.
+Playground 0.4.1 fixes the empty Edgeglow settings page.
 
-- Check for updates and install/restart from the settings window.
-- Verified downloads, safe staging, retained previous version, and startup rollback.
-- One-command online installer for the initial upgrade.
-- Automated renderer, updater, module, and GTK settings checks before release.
+The scrolling settings area now fills the module page. Favorites, palettes, sliders, and preview controls are visible and reachable again. GTK regression checks verify the viewport and scrolling at two window sizes.
 
-Your existing Edgeglow settings and favorites are preserved.
+Your saved settings are unchanged.

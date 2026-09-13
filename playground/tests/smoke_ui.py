@@ -21,6 +21,28 @@ with tempfile.TemporaryDirectory() as directory:
         while Gtk.events_pending():
             Gtk.main_iteration_do(False)
     window.stack.set_visible_child_name('edgeglow')
+    def settle():
+        loop = GLib.MainLoop()
+        GLib.timeout_add(400, lambda: loop.quit() or False)
+        loop.run()
+
+    # Widget existence alone missed a collapsed scrolling viewport in 0.4.0.
+    for width, height in [(850, 820), (700, 620)]:
+        window.resize(width, height)
+        settle()
+        scroller = window.panel.scroller
+        assert scroller.get_allocated_height() > 180, 'Settings viewport collapsed'
+        adjustment = scroller.get_vadjustment()
+        adjustment.set_value(0)
+        settle()
+        favorite = window.panel.favorites['sparks']
+        x, y = favorite.translate_coordinates(scroller, 0, 0)
+        assert 0 <= y < scroller.get_allocated_height(), 'Favorites clipped at top'
+        adjustment.set_value(adjustment.get_upper()-adjustment.get_page_size())
+        settle()
+        enabled = window.panel.enabled_switch
+        x, y = enabled.translate_coordinates(scroller, 0, 0)
+        assert 0 <= y < scroller.get_allocated_height(), 'Lower controls unreachable'
     window.panel.controls['chaos'].set_value(72)
     assert app.settings['chaos'] == 72
     window.module_switch.set_active(False)
