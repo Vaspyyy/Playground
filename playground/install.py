@@ -13,7 +13,7 @@ TARGET = DATA / 'edgeglow'
 ENTRY = DATA / 'applications/io.github.edgeglow.desktop'
 STARTUP = CONFIG / 'autostart/io.github.edgeglow.desktop'
 ICON = DATA / 'icons/hicolor/scalable/apps/io.github.edgeglow.svg'
-FILES = ['edgeglow.py', 'core.py', 'render.py', 'README.md', 'LICENSE', 'install.py', 'modules.py', 'playground_ui.py', 'updater.py', 'update_ui.py', 'update_helper.py', 'version.py', 'edgeglow.svg', 'mouse_core.py', 'mouse_magic.py', 'mouse_ui.py', 'pointer.js', 'setup-mouse.sh',
+FILES = ['edgeglow.py', 'core.py', 'render.py', 'README.md', 'LICENSE', 'install.py', 'modules.py', 'playground_ui.py', 'updater.py', 'update_ui.py', 'update_helper.py', 'version.py', 'edgeglow.svg', 'mouse_core.py', 'mouse_magic.py', 'mouse_ui.py', 'ui_kit.py', 'pointer.js', 'setup-mouse.sh',
          'kwin_mouse/CMakeLists.txt', 'kwin_mouse/main.cpp', 'kwin_mouse/metadata.json']
 
 

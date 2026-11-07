@@ -1,8 +1,10 @@
-# Playground 0.5.1 · Plasma window icon
+# Playground 0.5.2 · A prettier Playground
 
-- Explicitly set Playground's GTK icon and window identity to match its desktop launcher.
-- Use the installed SVG's absolute path in the desktop entry so Plasma does not depend on a stale icon-theme cache.
-- Refresh launcher and icon metadata when the installed app starts, including after an in-app update.
-- Preserve the existing Start at login setting during metadata repair.
+- Redesigned the whole window: a calmer home page, bigger module cards with tinted banners, and a "Coming soon" row for planned modules.
+- Module settings are grouped into rounded cards, with chips for effects and presets, color swatches for palettes, and a segmented control for cursor reactions.
+- Each module page uses its own color: lavender for Edgeglow, peach for Mouse Magic.
+- New live preview on the Edgeglow page loops your favorite effects with the current palette and sliders. It pauses while the window is hidden.
+- The footer is now one line: version, updates, Start at login, and Quit.
+- Playground keeps its own look on any GTK theme, including adw-gtk3 and Breeze.
 
 Update through **Check for updates → Update & restart**.

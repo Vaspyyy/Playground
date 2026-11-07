@@ -18,9 +18,10 @@ except (ImportError, ValueError) as error:
     sys.exit('Missing desktop dependencies. Run ./install.sh from the extracted Edgeglow folder.\n' + str(error))
 
 from core import DEFAULTS, EFFECTS, PALETTES, Pulse, load, save
-from render import draw_effect
+from render import draw_effect, color as palette_color
 from modules import ModuleController
 from playground_ui import PlaygroundWindow
+from ui_kit import SPECS, Choice, button, caption, group, hero, label, page, rounded, row, slider, styled, switch
 from mouse_magic import MouseMagic
 
 CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
@@ -158,96 +159,158 @@ class GlowWindow(Gtk.Window):
         return True
 
 
+class PaletteSwatch(Gtk.DrawingArea):
+    def __init__(self, palette):
+        super().__init__()
+        self.palette = palette
+        self.set_size_request(54, 26)
+        self.connect('draw', self.draw)
+
+    def draw(self, widget, cr):
+        width, height = self.get_allocated_width(), self.get_allocated_height()
+        gradient = cairo.LinearGradient(0, 0, width, 0)
+        for i in range(13):
+            gradient.add_color_stop_rgb(i/12, *palette_color(self.palette, i/12))
+        rounded(cr, 0, 0, width, height, 9)
+        cr.set_source(gradient)
+        cr.fill()
+        return True
+
+
+def swatch(palette):
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+    box.pack_start(PaletteSwatch(palette), False, False, 0)
+    name = Gtk.Label(label=palette.title())
+    box.pack_start(name, False, False, 0)
+    return box
+
+
+class GlowPreview(Gtk.DrawingArea):
+    """A small desktop that loops your favorite effects with the current look."""
+    SLOT = 4.0
+
+    def __init__(self, app):
+        super().__init__()
+        self.owner = app
+        self.tick_id = 0
+        self.started = time.monotonic()
+        self.drawn = 0
+        self.set_size_request(-1, 170)
+        self.connect('draw', self.draw)
+        self.connect('map', self.start)
+        self.connect('unmap', self.stop)
+
+    def start(self, *args):
+        # Frame-clock ticks pause on their own while the compositor hides the window.
+        if not self.tick_id:
+            self.started = time.monotonic()
+            self.tick_id = self.add_tick_callback(self.tick)
+
+    def stop(self, *args):
+        if self.tick_id:
+            self.remove_tick_callback(self.tick_id)
+            self.tick_id = 0
+
+    def tick(self, widget, clock):
+        now = time.monotonic()
+        if now - self.drawn >= 1/40:
+            self.drawn = now
+            self.queue_draw()
+        return True
+
+    def draw(self, widget, cr):
+        width, height = self.get_allocated_width(), self.get_allocated_height()
+        favorites = self.owner.settings['favorites']
+        elapsed = time.monotonic() - self.started
+        slot = int(elapsed // self.SLOT)
+        effect = favorites[slot % len(favorites)]
+        local = elapsed % self.SLOT
+        fade = max(0.0, min(1.0, local/.4, (self.SLOT-local)/.6))
+        rounded(cr, 0, 0, width, height, 18)
+        cr.clip()
+        backdrop = cairo.LinearGradient(0, 0, 0, height)
+        backdrop.add_color_stop_rgb(0, .19, .16, .24)
+        backdrop.add_color_stop_rgb(1, .11, .10, .15)
+        cr.set_source(backdrop)
+        cr.paint()
+        # A hint of a desktop: two windows and a panel.
+        cr.set_source_rgba(1, 1, 1, .045)
+        rounded(cr, width*.12, height*.18, width*.36, height*.5, 8)
+        cr.fill()
+        rounded(cr, width*.54, height*.3, width*.3, height*.4, 8)
+        cr.fill()
+        cr.rectangle(0, height-18, width, 18)
+        cr.fill()
+        caption(widget, cr, effect.title(), 16, height-44)
+        # Drawn at a typical monitor scale so glow width reads as it will on screen.
+        scale = width/960
+        cr.scale(scale, scale)
+        draw_effect(cr, 960, height/scale, self.owner.settings, effect, elapsed, fade*fade*(3-2*fade), slot)
+        return True
+
+
 class EdgeglowPanel(Gtk.Box):
     def __init__(self, app):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.owner = app
-        self.set_border_width(26)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.scroller = scroller
-        scroller.set_vexpand(True)
-        self.pack_start(scroller, True, True, 0)
-        scroller.add(box)
-        heading = Gtk.Label(xalign=0)
-        heading.set_markup('<span size="26000" weight="bold">Edgeglow</span>')
-        box.pack_start(heading, False, False, 0)
-        subtitle = Gtk.Label(label='A little color. Right when something happens.', xalign=0)
-        box.pack_start(subtitle, False, False, 0)
-        description = Gtk.Label(label='Choose your favorites. Each notification picks one at random.', xalign=0)
-        description.set_line_wrap(True)
-        box.pack_start(description, False, False, 0)
-        effects = Gtk.Box(spacing=14)
+        spec = SPECS['edgeglow']
+        self.scroller, box = page(spec)
+        self.pack_start(self.scroller, True, True, 0)
+        self.enabled_switch = switch(app.settings['enabled'])
+        self.enabled_switch.connect('notify::active', self.toggle, 'enabled')
+        box.pack_start(hero(spec, 'A little color, right when something happens.', self.enabled_switch), False, False, 0)
+        self.preview = GlowPreview(app)
+        box.pack_start(self.preview, False, False, 0)
+
+        effects = Gtk.Box(spacing=8)
         self.favorites = {}
         for effect in EFFECTS:
-            button = Gtk.CheckButton(label=effect.title())
-            button.set_active(effect in app.settings['favorites'])
-            button.connect('toggled', self.favorite_changed, effect)
-            effects.pack_start(button, False, False, 0)
-            self.favorites[effect] = button
-        box.pack_start(effects, False, False, 0)
-        palette_row = Gtk.Box(spacing=16)
-        palette_row.pack_start(Gtk.Label(label='Color palette', xalign=0), True, True, 0)
-        self.palette = Gtk.ComboBoxText()
-        for palette in PALETTES:
-            self.palette.append(palette, palette.title())
+            chip = styled(Gtk.ToggleButton(label=effect.title()), 'pg-chip')
+            chip.set_active(effect in app.settings['favorites'])
+            chip.connect('toggled', self.favorite_changed, effect)
+            effects.pack_start(chip, False, False, 0)
+            self.favorites[effect] = chip
+        box.pack_start(group('Favorite effects', row(None, effects, 'Each notification plays one of these at random.',
+                                                     stacked=True)), False, False, 0)
+
+        self.palette = Choice([(palette, swatch(palette)) for palette in PALETTES], kind='swatches', spacing=4)
         self.palette.set_active_id(app.settings['palette'])
         self.palette.connect('changed', self.palette_changed)
-        palette_row.pack_end(self.palette, False, False, 0)
-        box.pack_start(palette_row, False, False, 0)
-        preview_row = Gtk.Box(spacing=12)
-        preview_row.pack_start(Gtk.Label(label='Continuous screen preview', xalign=0), True, True, 0)
-        self.continuous_switch = Gtk.Switch()
-        self.continuous_switch.connect('notify::active', self.continuous_changed)
-        preview_row.pack_end(self.continuous_switch, False, False, 0)
-        box.pack_start(preview_row, False, False, 0)
-        self.effect_label = Gtk.Label(label='Preview is off. Notifications still use your favorites.', xalign=0)
-        self.effect_label.set_line_wrap(True)
-        box.pack_start(self.effect_label, False, False, 0)
-        grid = Gtk.Grid(column_spacing=18, row_spacing=14)
-        box.pack_start(grid, False, False, 0)
+        box.pack_start(group('Color palette', row(None, self.palette, stacked=True)), False, False, 0)
+
+        sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self.controls = {}
-        for row, (key, label, low, high, step, digits) in enumerate([
-            ('chaos', 'Chaos · subtle → ridiculous', 0, 100, 1, 0),
-            ('width', 'Glow width · logical px', 8, 120, 1, 0),
-            ('brightness', 'Brightness · %', 5, 100, 1, 0),
-            ('speed', 'Flow speed · laps/sec', .02, 1, .01, 2),
-            ('duration', 'Duration · seconds', .5, 10, .1, 1)]):
-            grid.attach(Gtk.Label(label=label, xalign=0), 0, row, 1, 1)
-            scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, low, high, step)
-            scale.set_hexpand(True)
-            scale.set_digits(digits)
-            scale.set_value(app.settings[key])
+        rows = []
+        for key, title, hint, low, high, step, digits in [
+                ('chaos', 'Chaos', 'subtle → ridiculous', 0, 100, 1, 0),
+                ('width', 'Glow width', 'logical pixels', 8, 120, 1, 0),
+                ('brightness', 'Brightness', 'percent', 5, 100, 1, 0),
+                ('speed', 'Flow speed', 'laps per second', .02, 1, .01, 2),
+                ('duration', 'Duration', 'seconds per glow', .5, 10, .1, 1)]:
+            scale = slider(low, high, step, digits, app.settings[key])
             scale.connect('value-changed', self.change, key)
-            grid.attach(scale, 1, row, 1, 1)
             self.controls[key] = scale
-        for key, title, active in [
-            ('enabled', 'Enable Edgeglow', app.settings['enabled'])]:
-            row = Gtk.Box(spacing=12)
-            row.pack_start(Gtk.Label(label=title, xalign=0), True, True, 0)
-            switch = Gtk.Switch()
-            switch.set_active(active)
-            switch.connect('notify::active', self.toggle, key)
-            if key == 'enabled':
-                self.enabled_switch = switch
-            row.pack_end(switch, False, False, 0)
-            box.pack_start(row, False, False, 0)
-        note = Gtk.Label(label='All monitors · Visible over fullscreen apps\nGlows during Do Not Disturb · Extra arrivals ignored while glowing', xalign=0)
-        note.set_line_wrap(True)
-        box.pack_start(note, False, False, 0)
-        self.status = Gtk.Label(label=app.status_text, xalign=0)
-        self.status.set_line_wrap(True)
+            rows.append(row(title, scale, hint, size_group=sizes))
+        self.reset_button = button('Reset look', 'pg-link', on_click=self.reset)
+        box.pack_start(group('Look', *rows, action=self.reset_button), False, False, 0)
+
+        self.continuous_switch = switch()
+        self.continuous_switch.connect('notify::active', self.continuous_changed)
+        self.effect_label = label('Preview is off. Notifications still use your favorites.')
+        self.try_button = button('Play', on_click=lambda *_: app.try_effect())
+        box.pack_start(group('On your screen',
+                             row('Continuous preview', self.continuous_switch, self.effect_label),
+                             row('Try an effect', self.try_button, 'Plays one of your favorites, the way a notification would.')),
+                       False, False, 0)
+
+        note = styled(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6), 'pg-note')
+        self.status = label(app.status_text, 'pg-secondary', 'pg-small', wrap=True)
         self.status.set_max_width_chars(65)
         self.status.set_selectable(True)
-        box.pack_start(self.status, False, False, 0)
-        actions = Gtk.Box(spacing=10)
-        for title, callback in [('Try another effect', lambda *_: app.try_effect()),
-                                ('Reset look', self.reset)]:
-            button = Gtk.Button(label=title)
-            button.connect('clicked', callback)
-            actions.pack_start(button, True, True, 0)
-        box.pack_end(actions, False, False, 0)
+        note.pack_start(self.status, False, False, 0)
+        note.pack_start(label('All monitors · Visible over fullscreen apps · Glows during Do Not Disturb · '
+                              'Extra arrivals are ignored while glowing', 'pg-muted', 'pg-small', wrap=True), False, False, 0)
+        box.pack_start(note, False, False, 0)
 
     def on_close(self, *args):
         self.continuous_switch.set_active(False)

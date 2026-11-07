@@ -6,28 +6,34 @@ import subprocess
 import threading
 from gi.repository import Gtk, GLib
 from version import VERSION
-from updater import latest_release, stage_release, version_tuple
+from updater import REPOSITORY, latest_release, stage_release, version_tuple
+from ui_kit import button, label
 
 
 class UpdateControls(Gtk.Box):
     def __init__(self, app):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         self.app, self.release = app, None
-        row = Gtk.Box(spacing=10)
-        self.label = Gtk.Label(label='Playground '+VERSION, xalign=0)
-        row.pack_start(self.label, True, True, 0)
-        self.button = Gtk.Button(label='Check for updates')
-        self.button.connect('clicked', self.clicked)
-        row.pack_end(self.button, False, False, 0)
+        self.set_valign(Gtk.Align.CENTER)
+        row = Gtk.Box(spacing=4)
+        self.label = label('Playground '+VERSION, 'pg-muted')
+        row.pack_start(self.label, False, False, 0)
+        self.button = button('Check for updates', 'pg-link', on_click=self.clicked)
+        self.button.set_tooltip_text('Updates come only from '+REPOSITORY+' on GitHub')
+        row.pack_start(self.button, False, False, 0)
         self.pack_start(row, False, False, 0)
-        self.detail = Gtk.Label(label='Updates from Vaspyyy/Playground on GitHub', xalign=0)
-        self.detail.set_line_wrap(True)
-        self.detail.set_max_width_chars(65)
+        self.detail = label('', 'pg-muted', 'pg-small', wrap=True)
+        self.detail.set_max_width_chars(60)
+        self.detail.set_no_show_all(True)
         self.pack_start(self.detail, False, False, 0)
+
+    def say(self, text):
+        self.detail.set_text(text)
+        self.detail.set_visible(bool(text))
 
     def clicked(self, *args):
         self.button.set_sensitive(False)
-        self.detail.set_text('Downloading and checking update…' if self.release else 'Checking GitHub…')
+        self.say('Downloading and checking update…' if self.release else 'Checking GitHub…')
         threading.Thread(target=self.work, daemon=True).start()
 
     def work(self):
@@ -53,14 +59,17 @@ class UpdateControls(Gtk.Box):
         if version_tuple(release['version']) > version_tuple(VERSION):
             self.release = release
             self.button.set_label('Update & restart')
-            self.detail.set_text('Version '+release['version']+' is available. Your settings will be kept.')
+            context = self.button.get_style_context()
+            context.remove_class('pg-link')
+            context.add_class('pg-primary')
+            self.say('Version '+release['version']+' is available. Your settings will be kept.')
         else:
-            self.detail.set_text('You’re up to date.')
+            self.say('You’re up to date.')
         return False
 
     def failed(self, message):
         self.button.set_sensitive(True)
-        self.detail.set_text('Update unavailable: '+message)
+        self.say('Update unavailable: '+message)
         return False
 
     def restart(self, helper, target, staged):

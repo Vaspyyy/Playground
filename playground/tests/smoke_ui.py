@@ -42,11 +42,18 @@ with tempfile.TemporaryDirectory() as directory:
         assert 0 <= y < scroller.get_allocated_height(), 'Favorites clipped at top'
         adjustment.set_value(adjustment.get_upper()-adjustment.get_page_size())
         settle()
-        enabled = window.panel.enabled_switch
-        x, y = enabled.translate_coordinates(scroller, 0, 0)
+        lowest = window.panel.try_button
+        x, y = lowest.translate_coordinates(scroller, 0, 0)
         assert 0 <= y < scroller.get_allocated_height(), 'Lower controls unreachable'
+    assert window.panel.preview.tick_id, 'Edgeglow preview is not animating'
     window.panel.controls['chaos'].set_value(72)
     assert app.settings['chaos'] == 72
+    window.panel.palette.set_active_id('aurora')
+    assert app.settings['palette'] == 'aurora'
+    window.panel.reset_button.clicked()
+    assert app.settings['palette'] == 'rainbow' and app.settings['chaos'] == 45
+    assert window.panel.palette.buttons['rainbow'].get_active()
+    assert not window.panel.palette.buttons['aurora'].get_active()
     window.module_switch.set_active(False)
     assert not app.modules.enabled('edgeglow')
     assert not window.panel.enabled_switch.get_active()
@@ -75,6 +82,7 @@ with tempfile.TemporaryDirectory() as directory:
     window.go_home()
     settle()
     assert mouse.preview_timer == 0, 'Hidden preview is still running'
+    assert window.panel.preview.tick_id == 0, 'Hidden Edgeglow preview is still running'
     assert window.stack.get_visible_child_name() == 'home'
     window.destroy()
     app.quit()

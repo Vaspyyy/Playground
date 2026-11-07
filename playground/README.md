@@ -29,7 +29,8 @@ and avoid duplicate startup entries. Login startup is controlled in the global f
 - Rainbow, Aurora, Fire, Ice, Candy, and Sunset palettes.
 - Chaos slider changes particle count, travel distance, comet count and tails, or wave complexity.
 - Continuous screen preview keeps the selected effect running while you adjust sliders.
-- Use **Try another effect** to pick a new random preview. Random choices can repeat.
+- Use **Try an effect → Play** to pick a new random preview. Random choices can repeat.
+- The small preview at the top of the Edgeglow page loops your favorites with the current palette and sliders, without touching your screen.
 - Closing settings stops continuous preview. Notification behavior continues normally.
 - Every monitor shares the effect, seed, clock, and palette. New effect corner crossings
   use normalized screen positions, so differently shaped displays stay synchronized.
@@ -60,8 +61,8 @@ There is no tray icon; reopen settings through the application launcher.
 
 ## Quick check on your desktop
 
-1. Open Playground, choose **Open & play** on Edgeglow, and confirm that its status says it is listening.
-2. Click **Try another effect** for a timed preview, or enable **Continuous screen preview** and adjust sliders. All monitors should animate together.
+1. Open Playground, choose **Customize** on Edgeglow, and confirm that its status says it is listening.
+2. Click **Play** for a timed preview, or enable **Continuous preview** and adjust sliders. All monitors should animate together.
 3. With `notify-send` installed (Arch package `libnotify`), run:
 
    ```sh
