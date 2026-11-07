@@ -14,22 +14,24 @@ jobs:
     container: archlinux:base-devel
     steps:
       - name: Install KDE build dependencies
-        run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules vulkan-headers xorg-server-xvfb xdotool kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
+        run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules vulkan-headers kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
       - uses: actions/checkout@v4
       - name: Compile the native click bridge against current KDE
         run: |
           cmake -S playground/kwin_mouse -B /tmp/playground-mouse -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
           cmake --build /tmp/playground-mouse --parallel 2
           cmake --install /tmp/playground-mouse
-      - name: Test in virtual KDE Wayland
+      - name: Test in headless KDE Wayland
         timeout-minutes: 3
         env:
           QT_QPA_PLATFORM: offscreen
           LIBGL_ALWAYS_SOFTWARE: "1"
+        # KWin 6.8's nested X11 backend needs DRI3, which Xvfb lacks. The virtual backend
+        # renders with Mesa's software OpenGL, and the test clicks through KWin's fake input.
         run: |
           setcap -r /usr/bin/kwin_wayland
           export XDG_RUNTIME_DIR=$(mktemp -d)
-          xvfb-run -a -s "-screen 0 1280x1024x24" sh -c 'dbus-run-session -- kwin_wayland --x11-display "$DISPLAY" --width 1280 --height 1024 --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"' 
+          dbus-run-session -- kwin_wayland --virtual --width 1280 --height 1024 --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"
   release:
     needs: mouse-helper
     runs-on: ubuntu-24.04

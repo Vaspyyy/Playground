@@ -4,10 +4,12 @@ from pathlib import Path
 import sys
 import tempfile
 import time
-import subprocess
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from wayland_input import FakePointer
 with tempfile.TemporaryDirectory() as directory:
     os.environ['XDG_CONFIG_HOME'] = directory
+    # Headless KWin has no mouse; this one exists for the whole session.
+    pointer = FakePointer()
     import edgeglow
     import install
     install.refresh_desktop_integration()
@@ -26,12 +28,19 @@ with tempfile.TemporaryDirectory() as directory:
         loop = GLib.MainLoop()
         GLib.timeout_add(ms,lambda: loop.quit() or False)
         loop.run()
+
+    def wait_for(condition, seconds=5):
+        # Software-rendered compositors take a moment before the session reports unlocked.
+        deadline = time.monotonic()+seconds
+        while not condition() and time.monotonic() < deadline:
+            settle(100)
+        return condition()
     app.set_module_enabled(True,'mouse')
     settle()
     mouse = app.mouse
     assert mouse.native, mouse.status
     assert time.monotonic()-mouse.last_frame<1, 'No native bridge frames received'
-    assert mouse.world.cursor is not None, 'Native cursor missing'
+    assert wait_for(lambda: mouse.world.cursor is not None), 'Native cursor missing'
     assert any(w.get_visible() for w in mouse.overlays), 'Mouse overlays not mapped'
     for overlay in mouse.overlays:
         assert overlay.get_window().get_pass_through(), 'Overlay intercepts mouse input'
@@ -46,7 +55,7 @@ with tempfile.TemporaryDirectory() as directory:
     target.present()
     settle()
     mouse.world.ripples.clear()
-    subprocess.run(['xdotool','mousemove','--sync','400','300','click','1'],check=True)
+    pointer.click(400,300)
     settle(180)
     assert clicks, 'Click did not reach the application under the overlay'
     assert len(mouse.world.ripples)==1, 'Native click did not produce exactly one ripple'
@@ -69,7 +78,7 @@ with tempfile.TemporaryDirectory() as directory:
     settle()
     assert mouse.script, mouse.status
     assert time.monotonic()-mouse.last_frame<1, 'No script bridge frames received'
-    assert mouse.world.cursor is not None, 'Script cursor missing'
+    assert wait_for(lambda: mouse.world.cursor is not None), 'Script cursor missing'
     app.set_module_enabled(False,'mouse')
     assert mouse.timer == 0 and mouse.owner is None
     assert all(not w.get_visible() for w in mouse.overlays)
@@ -78,4 +87,5 @@ with tempfile.TemporaryDirectory() as directory:
     mouse.close()
     app.mouse = None
     app.quit()
+    pointer.close()
     print('Virtual KDE Wayland bridge and click-through smoke test passed')
