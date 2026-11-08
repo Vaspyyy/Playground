@@ -11,7 +11,10 @@ concurrency:
 jobs:
   mouse-helper:
     runs-on: ubuntu-24.04
-    container: archlinux:base-devel
+    container:
+      image: archlinux:base-devel
+      # Without a GPU, KWin renders with Mesa's software OpenGL through the host's /dev/udmabuf.
+      options: --privileged
     steps:
       - name: Install KDE build dependencies
         run: pacman -Syu --noconfirm --needed git cmake extra-cmake-modules vulkan-headers kwin python-gobject python-cairo gtk3 gtk-layer-shell mesa dbus
@@ -29,6 +32,7 @@ jobs:
         # KWin 6.8's nested X11 backend needs DRI3, which Xvfb lacks. The virtual backend
         # renders with Mesa's software OpenGL, and the test clicks through KWin's fake input.
         run: |
+          ls -l /dev/udmabuf || echo 'No /dev/udmabuf: KWin cannot composite with software OpenGL'
           setcap -r /usr/bin/kwin_wayland
           export XDG_RUNTIME_DIR=$(mktemp -d)
           dbus-run-session -- kwin_wayland --virtual --width 1280 --height 1024 --no-lockscreen --exit-with-session "python $GITHUB_WORKSPACE/playground/tests/smoke_wayland.py"

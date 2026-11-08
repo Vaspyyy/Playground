@@ -39,9 +39,9 @@ with tempfile.TemporaryDirectory() as directory:
     settle()
     mouse = app.mouse
     assert mouse.native, mouse.status
-    assert time.monotonic()-mouse.last_frame<1, 'No native bridge frames received'
+    assert wait_for(lambda: time.monotonic()-mouse.last_frame<1), 'No native bridge frames received'
     assert wait_for(lambda: mouse.world.cursor is not None), 'Native cursor missing'
-    assert any(w.get_visible() for w in mouse.overlays), 'Mouse overlays not mapped'
+    assert wait_for(lambda: any(w.get_visible() for w in mouse.overlays)), 'Mouse overlays not mapped'
     for overlay in mouse.overlays:
         assert overlay.get_window().get_pass_through(), 'Overlay intercepts mouse input'
     # A real Wayland click must reach the underlying app and create exactly one ripple.
@@ -56,12 +56,12 @@ with tempfile.TemporaryDirectory() as directory:
     settle()
     mouse.world.ripples.clear()
     pointer.click(400,300)
+    assert wait_for(lambda: clicks), 'Click did not reach the application under the overlay'
+    assert wait_for(lambda: mouse.world.ripples), 'Native click did not produce a ripple'
     settle(180)
-    assert clicks, 'Click did not reach the application under the overlay'
     assert len(mouse.world.ripples)==1, 'Native click did not produce exactly one ripple'
     app.settings['mouse']['fullscreen'] = False
-    settle(180)
-    assert all(not w.get_visible() for w in mouse.overlays), 'Fullscreen suppression failed'
+    assert wait_for(lambda: all(not w.get_visible() for w in mouse.overlays)), 'Fullscreen suppression failed'
     target.destroy()
     app.settings['mouse']['fullscreen'] = True
     settle()
@@ -77,7 +77,7 @@ with tempfile.TemporaryDirectory() as directory:
     mouse.locked = False
     settle()
     assert mouse.script, mouse.status
-    assert time.monotonic()-mouse.last_frame<1, 'No script bridge frames received'
+    assert wait_for(lambda: time.monotonic()-mouse.last_frame<1), 'No script bridge frames received'
     assert wait_for(lambda: mouse.world.cursor is not None), 'Script cursor missing'
     app.set_module_enabled(False,'mouse')
     assert mouse.timer == 0 and mouse.owner is None
